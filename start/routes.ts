@@ -18,11 +18,11 @@
 |
 */
 
-import Route from '@ioc:Adonis/Core/Route'
+import Route from '@ioc:Adonis/Core/Route';
 
 Route.get('/', async () => {
-  return { hello: 'world' }
-})
+  return { hello: 'world' };
+});
 
 Route.post('/chargeBank', 'TransactionsController.chargeBank');
 
@@ -32,4 +32,6 @@ Route.post('/chargeCard', 'TransactionsController.chargeCard');
 
 Route.post('/createRecipient', 'TransactionsController.createRecipient');
 
-Route.post('/transfer', 'TransactionsController.bankTransfer')
+Route.post('/transfer', 'TransactionsController.bankTransfer');
+
+Route.post('/createUser', 'UsersController.createUser');
