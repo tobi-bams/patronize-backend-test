@@ -6,7 +6,13 @@ export default class Accounts extends BaseSchema {
   public async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id');
-      table.integer('user_id').unique().notNullable();
+      table
+        .integer('user_id')
+        .unique()
+        .notNullable()
+        .unsigned()
+        .references('users.id')
+        .onDelete('CASCADE');
       table.decimal('balance', 20, 4).unsigned();
 
       /**
