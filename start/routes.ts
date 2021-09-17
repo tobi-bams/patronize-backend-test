@@ -35,3 +35,5 @@ Route.post('/createRecipient', 'TransactionsController.createRecipient');
 Route.post('/transfer', 'TransactionsController.bankTransfer');
 
 Route.post('/createUser', 'UsersController.createUser');
+
+Route.post('/webhook', 'TransactionsController.webhookResponse')
