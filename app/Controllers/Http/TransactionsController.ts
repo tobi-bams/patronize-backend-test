@@ -132,7 +132,6 @@ export default class TransactionsController {
       })
       .then((res) => console.log(res))
       .catch((err) => console.log(err));
-
   }
 
   public async bankTransfer({ response }: HttpContextContract) {
@@ -165,6 +164,107 @@ export default class TransactionsController {
     }
   }
 
+  public async sendMoney({ request, response }: HttpContextContract) {
+    const senderEmail = request.input('sender_email');
+    const recipientEmail = request.input('recipient_email');
+    const amount = Number(request.input('amount'));
+
+    if (senderEmail === recipientEmail) {
+      response.status(403);
+      return {
+        status: false,
+        message: "Sorry, you can't make transfer to yourself",
+      };
+    }
+
+    const sender = await User.query().where('email', senderEmail).first();
+
+    if (!sender) {
+      response.status(401);
+      return {
+        status: false,
+        message: 'Invalid Credientials',
+      };
+    }
+
+    const recipient = await User.query().where('email', recipientEmail).first();
+    if (!recipient) {
+      response.status(404);
+      return {
+        status: false,
+        message: 'Recipient does not Exist on our platform, you can invite them to join',
+      };
+    }
+
+    const senderAccount = await Account.query().where('user_id', sender.id).firstOrFail();
+    const recipientAccount = await Account.query().where('user_id', recipient.id).firstOrFail();
+
+    if (amount > Number(senderAccount.balance)) {
+      response.status(403);
+      return {
+        status: false,
+        message: 'Insufficient Balance',
+      };
+    }
+
+    const trx = await Database.transaction();
+
+    try {
+      const senderTxn = new Transaction();
+      senderTxn.fill({
+        amount: amount,
+        txn_type: 'debit',
+        purpose: 'transfer',
+        account_id: senderAccount.id,
+        reference: v4(),
+        balance_before: Number(senderAccount.balance),
+        balance_after: Number(senderAccount.balance) - amount,
+        third_party: recipient.name,
+      });
+
+      senderTxn.useTransaction(trx);
+      await senderTxn.save();
+
+      senderAccount.balance = Number(senderAccount.balance) - amount;
+      senderAccount.useTransaction(trx);
+      await senderAccount.save();
+
+      const recipientTxn = new Transaction();
+      recipientTxn.fill({
+        amount: amount,
+        txn_type: 'credit',
+        purpose: 'transfer',
+        account_id: recipientAccount.id,
+        reference: v4(),
+        balance_before: Number(recipientAccount.balance),
+        balance_after: Number(recipientAccount.balance) + amount,
+        third_party: sender.name,
+      });
+
+      recipientTxn.useTransaction(trx);
+      await recipientTxn.save();
+
+      recipientAccount.balance = Number(recipientAccount.balance) + amount;
+      recipientAccount.useTransaction(trx);
+      await recipientAccount.save();
+
+      await trx.commit();
+      response.status(200);
+      return {
+        status: true,
+        message: 'Transfer Successful',
+      };
+    } catch (error) {
+      await trx.rollback();
+      console.log(error);
+      response.status(500);
+      return {
+        status: false,
+        message: 'Sorry an Error Occur Please try again later',
+      };
+    }
+  }
+
   public async webhookResponse({ request, response }: HttpContextContract) {
     const event = request.input('event');
     const data = request.input('data');
@@ -172,12 +272,15 @@ export default class TransactionsController {
     const trx = await Database.transaction();
 
     if (event === 'charge.success') {
-
       try {
         const external_transactions = await ExternalTransaction.findByOrFail(
           'external_reference',
           data.reference
         );
+
+        if (external_transactions.status === 'success') {
+          response.status(200);
+        }
         external_transactions.status = data.status;
 
         external_transactions.useTransaction(trx);
@@ -189,29 +292,28 @@ export default class TransactionsController {
         transaction.fill({
           external_reference: data.reference,
           account_id: external_transactions.account_id,
-          amount: Number(data.amount)/100,
-          txn_type: "credit",
+          amount: Number(data.amount) / 100,
+          txn_type: 'credit',
           third_party: data.authorization.bank,
-          purpose: "deposit",
+          purpose: 'deposit',
           reference: v4(),
           balance_before: account.balance,
-          balance_after: (Number(account.balance) + (Number(data.amount)/100))
+          balance_after: Number(account.balance) + Number(data.amount) / 100,
         });
 
         transaction.useTransaction(trx);
-        await transaction.save()
+        await transaction.save();
 
-        account.balance = Number(account.balance) + Number((data.amount)/100);
-        account.useTransaction(trx)
+        account.balance = Number(account.balance) + Number(data.amount / 100);
+        account.useTransaction(trx);
         await account.save();
 
-        await trx.commit()
-        response.status(200)
+        await trx.commit();
+        response.status(200);
       } catch (error) {
-        await trx.rollback()
-        console.log(error)
+        await trx.rollback();
+        console.log(error);
       }
-
     }
   }
 }
