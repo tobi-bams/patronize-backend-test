@@ -298,13 +298,13 @@ export default class TransactionsController {
           purpose: 'deposit',
           reference: v4(),
           balance_before: account.balance,
-          balance_after: Number(account.balance) + Number(data.amount) / 100,
+          balance_after: Number(account.balance) + (Number(data.amount) / 100),
         });
 
         transaction.useTransaction(trx);
         await transaction.save();
 
-        account.balance = Number(account.balance) + Number(data.amount / 100);
+        account.balance = Number(account.balance) + (Number(data.amount) / 100);
         account.useTransaction(trx);
         await account.save();
 
