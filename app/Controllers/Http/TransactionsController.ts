@@ -1,11 +1,11 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
 import Env from '@ioc:Adonis/Core/Env';
 import User from 'App/Models/User';
-// import Account from 'App/Models/Account';
 import Database from '@ioc:Adonis/Lucid/Database';
 import ExternalTransaction from 'App/Models/ExternalTransaction';
 import Transaction from 'App/Models/Transaction';
 import Account from 'App/Models/Account';
+import Beneficiary from 'App/Models/Beneficiary';
 const { v4 } = require('uuid');
 
 const axios = require('axios');
@@ -265,6 +265,111 @@ export default class TransactionsController {
     }
   }
 
+  public async withdrawal({ response, request }: HttpContextContract) {
+    const email = request.input('email');
+    const amount = Number(request.input('amount'));
+    const account_number = request.input('account_number');
+
+    const user = await User.query().where('email', email).first();
+
+    if (!user) {
+      response.status(401);
+      return {
+        status: false,
+        message: 'Invalid Credentials',
+      };
+    }
+
+    const beneficiary = await Beneficiary.query()
+      .where('account_number', account_number)
+      .where('user_id', user.id)
+      .first();
+
+    if (!beneficiary) {
+      response.status(404);
+      return {
+        status: false,
+        message: "You can only withdraw to a Bank Account you've added to the platform",
+      };
+    }
+
+    const account = await Account.query().where('user_id', user.id).firstOrFail();
+    if (amount > Number(account.balance)) {
+      response.status(403);
+      return {
+        status: false,
+        message: 'Insufficient Balance',
+      };
+    }
+
+    const trx = await Database.transaction();
+    const transferBody = {
+      source: 'balance',
+      amount: amount * 100,
+      recipient: 'RCP_2y2y045018jozz8',
+      reason: 'Withdraw from Patronize',
+    };
+
+    try {
+      const currentBalance = Number(account.balance);
+
+      const bankTransfer = await axios.post('https://api.paystack.co/transfer', transferBody, {
+        headers: {
+          'Authorization': `Bearer ${Env.get('PAYSTACK_SECRET')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const external_txn = new ExternalTransaction();
+      external_txn.fill({
+        amount: amount,
+        txn_type: 'Transfer',
+        account_id: account.id,
+        external_reference: bankTransfer.data.data.reference,
+        third_party: user.name,
+        status: 'pending',
+      });
+
+      external_txn.useTransaction(trx);
+      await external_txn.save();
+
+      const transaction = new Transaction();
+      transaction.fill({
+        amount: amount,
+        txn_type: 'debit',
+        purpose: 'widthdrawal',
+        account_id: account.id,
+        reference: v4(),
+        balance_before: currentBalance,
+        balance_after: currentBalance - amount,
+        third_party: beneficiary.account_name,
+        external_reference: bankTransfer.data.data.reference
+      });
+
+      transaction.useTransaction(trx);
+      await transaction.save();
+
+      account.balance = currentBalance - amount;
+      account.useTransaction(trx);
+      await account.save();
+      await trx.commit();
+
+      response.status(200);
+      return {
+        status: true,
+        message: 'Transaction Successful',
+      };
+    } catch (error) {
+      await trx.rollback();
+      console.log(error)
+      response.status(500);
+      return {
+        status: false,
+        message: "Sorry an error occured, please try again later"
+      }
+    }
+  }
+
   public async webhookResponse({ request, response }: HttpContextContract) {
     const event = request.input('event');
     const data = request.input('data');
@@ -298,13 +403,13 @@ export default class TransactionsController {
           purpose: 'deposit',
           reference: v4(),
           balance_before: account.balance,
-          balance_after: Number(account.balance) + (Number(data.amount) / 100),
+          balance_after: Number(account.balance) + Number(data.amount) / 100,
         });
 
         transaction.useTransaction(trx);
         await transaction.save();
 
-        account.balance = Number(account.balance) + (Number(data.amount) / 100);
+        account.balance = Number(account.balance) + Number(data.amount) / 100;
         account.useTransaction(trx);
         await account.save();
 

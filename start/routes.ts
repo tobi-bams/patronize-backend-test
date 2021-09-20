@@ -41,3 +41,5 @@ Route.post('/sendMoney', 'TransactionsController.sendMoney');
 Route.post('/webhook', 'TransactionsController.webhookResponse');
 
 Route.post('/addBank', 'UsersController.createBeneficiary');
+
+Route.post('/withdraw', 'TransactionsController.withdrawal');
