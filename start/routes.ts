@@ -38,7 +38,7 @@ Route.post('/createUser', 'UsersController.createUser');
 
 Route.post('/sendMoney', 'TransactionsController.sendMoney');
 
-Route.post('/webhook', 'TransactionsController.webhookResponse');
+Route.post('/webhook', 'WebhooksController.webhookResponse');
 
 Route.post('/addBank', 'UsersController.createBeneficiary');
 
