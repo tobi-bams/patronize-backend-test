@@ -84,8 +84,7 @@ export default class TransactionsController {
         response.status(200);
         return {
           status: true,
-          message: 'Transaction Successful',
-          data: submitOtp2.data.data,
+          message: 'Account Funded Successfully',
         };
       }
     } catch (error) {
@@ -175,35 +174,6 @@ export default class TransactionsController {
       .catch((err) => console.log(err));
   }
 
-  public async bankTransfer({ response }: HttpContextContract) {
-    const transferBody = {
-      source: 'balance',
-      amount: '5000000',
-      recipient: 'RCP_2y2y045018jozz8',
-      reason: 'Withdraw from Patronize',
-    };
-
-    // const transferBody = {
-    //   transfer_code: "TRF_mrmm7bdm5liinig",
-    //   otp: "136109"
-    // }
-
-    try {
-      const bankTransfer = await axios.post('https://api.paystack.co/transfer', transferBody, {
-        headers: {
-          'Authorization': `Bearer ${Env.get('PAYSTACK_SECRET')}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (bankTransfer.data.status) {
-        response.status(bankTransfer.status);
-        return bankTransfer.data;
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  }
 
   public async sendMoney({ request, response }: HttpContextContract) {
     const senderEmail = request.input('sender_email');

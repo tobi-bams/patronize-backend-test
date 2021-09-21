@@ -12,7 +12,7 @@ export default class WebhooksController {
     const body = request.body();
     const header = request.header('x-paystack-signature');
     const paysatck_secret = Env.get('PAYSTACK_SECRET');
-    console.log(request);
+
     let hash = crypto
       .createHmac('sha512', paysatck_secret)
       .update(JSON.stringify(body))
@@ -69,7 +69,7 @@ export default class WebhooksController {
       }
 
       if (event === 'transfer.success') {
-        setTimeout(async() => {
+        setTimeout(async () => {
           try {
             const external_transactions = await ExternalTransaction.findByOrFail(
               'external_reference',
