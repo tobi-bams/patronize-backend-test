@@ -6,18 +6,25 @@ import ExternalTransaction from 'App/Models/ExternalTransaction';
 import Transaction from 'App/Models/Transaction';
 import Account from 'App/Models/Account';
 import Beneficiary from 'App/Models/Beneficiary';
+import { schema, rules } from '@ioc:Adonis/Core/Validator';
 const { v4 } = require('uuid');
 
 const axios = require('axios');
 
 export default class TransactionsController {
   public async chargeBank({ request, response }: HttpContextContract) {
-    const email = request.input('email');
-    const amount = request.input('amount');
+    const chargeBankSchema = schema.create({
+      email: schema.string({}, [rules.email()]),
+      amount: schema.number(),
+    });
+
+    const payload = await request.validate({ schema: chargeBankSchema });
+    const email = payload.email;
+    const amount = Number(payload.amount);
 
     const paystackBody = {
       email: email,
-      amount: amount,
+      amount: amount * 100,
       bank: {
         account_number: '0000000000',
         code: '057',
@@ -26,6 +33,8 @@ export default class TransactionsController {
       otp: '123456',
     };
 
+    // The line below serves for authentication, to know if the user exist in the system and to
+    // know which user is performing the transaction.
     const user = await User.query().where('email', email).preload('account').first();
     if (!user) {
       response.status(401);
@@ -98,9 +107,17 @@ export default class TransactionsController {
   }
 
   public async chargeCard({ request, response }: HttpContextContract) {
-    const email = request.input('email');
-    const amount = request.input('amount');
+    const chargeCardSchema = schema.create({
+      email: schema.string({}, [rules.email()]),
+      amount: schema.number(),
+    });
 
+    const payload = await request.validate({ schema: chargeCardSchema });
+    const email = payload.email;
+    const amount = Number(payload.amount);
+
+    // The line below serves for authentication, to know if the user exist in the system and to
+    // know which user is performing the transaction.
     const user = await User.query().where('email', email).preload('account').first();
 
     if (!user) {
@@ -113,7 +130,7 @@ export default class TransactionsController {
 
     const paystackRequestBody = {
       email: email,
-      amount: parseInt(amount) * 100,
+      amount: amount * 100,
       card: {
         cvv: '408',
         number: '4084084084084081',
@@ -174,11 +191,17 @@ export default class TransactionsController {
       .catch((err) => console.log(err));
   }
 
-
   public async sendMoney({ request, response }: HttpContextContract) {
-    const senderEmail = request.input('sender_email');
-    const recipientEmail = request.input('recipient_email');
-    const amount = Number(request.input('amount'));
+    const sendMoneySchema = schema.create({
+      sender_email: schema.string({}, [rules.email()]),
+      recipient_email: schema.string({}, [rules.email()]),
+      amount: schema.number(),
+    });
+
+    const payload = await request.validate({ schema: sendMoneySchema });
+    const senderEmail = payload.sender_email;
+    const recipientEmail = payload.recipient_email;
+    const amount = Number(payload.amount);
 
     if (senderEmail === recipientEmail) {
       response.status(403);
@@ -188,6 +211,8 @@ export default class TransactionsController {
       };
     }
 
+    // The line below serves for authentication, to know if the user exist in the system and to
+    // know which user is performing the transaction.
     const sender = await User.query().where('email', senderEmail).first();
 
     if (!sender) {
@@ -277,10 +302,19 @@ export default class TransactionsController {
   }
 
   public async withdrawal({ response, request }: HttpContextContract) {
-    const email = request.input('email');
-    const amount = Number(request.input('amount'));
-    const account_number = request.input('account_number');
+    const withdrawalSchema = schema.create({
+      email: schema.string({}, [rules.email()]),
+      amount: schema.number(),
+      account_number: schema.string({}, [rules.maxLength(10), rules.minLength(10)]),
+    });
 
+    const payload = await request.validate({ schema: withdrawalSchema });
+    const email = payload.email;
+    const amount = Number(payload.amount);
+    const account_number = payload.account_number;
+
+    // The line below serves for authentication, to know if the user exist in the system and to
+    // know which user is performing the transaction.
     const user = await User.query().where('email', email).first();
 
     if (!user) {

@@ -69,6 +69,9 @@ export default class WebhooksController {
       }
 
       if (event === 'transfer.success') {
+        // I used a setTimeout below because the transfer transactions takes some seconds to commit and most times the
+        // Paystack Webhook is already triggered before the transfer transaction commit, so the 6s delay helps solves that
+
         setTimeout(async () => {
           try {
             const external_transactions = await ExternalTransaction.findByOrFail(

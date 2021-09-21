@@ -1,4 +1,5 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
+import { schema, rules } from '@ioc:Adonis/Core/Validator';
 
 import User from 'App/Models/User';
 import Database from '@ioc:Adonis/Lucid/Database';
@@ -7,9 +8,16 @@ import Beneficiary from 'App/Models/Beneficiary';
 
 export default class UsersController {
   public async createUser({ response, request }: HttpContextContract) {
-    let email = request.input('email');
-    let name = request.input('name');
-    let password = request.input('password');
+    const newUserSchema = schema.create({
+      email: schema.string({}, [rules.email()]),
+      name: schema.string({ trim: true }),
+      password: schema.string(),
+    });
+
+    const payload = await request.validate({ schema: newUserSchema });
+    let email = payload.email;
+    let name = payload.name;
+    let password = payload.password;
 
     const trx = await Database.transaction();
 
@@ -17,7 +25,7 @@ export default class UsersController {
       const existingUser = await User.query().where('email', email).first();
 
       if (existingUser) {
-        response.status(400);
+        response.status(403);
         return {
           status: false,
           message: 'User Already Exist',
@@ -54,10 +62,18 @@ export default class UsersController {
   }
 
   public async createBeneficiary({ response, request }: HttpContextContract) {
-    const bank_name = request.input('bank_name');
-    const account_number = request.input('account_number');
-    const account_name = request.input('account_name');
-    const email = request.input('email');
+    const bankDetailSchema = schema.create({
+      bank_name: schema.string({ trim: true }),
+      account_number: schema.string({}, [rules.maxLength(10), rules.minLength(10)]),
+      account_name: schema.string({ trim: true }),
+      email: schema.string({}, [rules.email()]),
+    });
+
+    const payload = await request.validate({schema: bankDetailSchema});
+    const bank_name = payload.bank_name
+    const account_number = payload.account_number;
+    const account_name = payload.account_name;
+    const email = payload.email;
 
     const user = await User.query().where('email', email).first();
     if (!user) {

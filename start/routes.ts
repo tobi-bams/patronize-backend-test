@@ -26,13 +26,7 @@ Route.get('/', async () => {
 
 Route.post('/chargeBank', 'TransactionsController.chargeBank');
 
-Route.post('/submit_otp', 'TransactionsController.submitOtp');
-
 Route.post('/chargeCard', 'TransactionsController.chargeCard');
-
-Route.post('/createRecipient', 'TransactionsController.createRecipient');
-
-Route.post('/transfer', 'TransactionsController.bankTransfer');
 
 Route.post('/createUser', 'UsersController.createUser');
 

@@ -10,7 +10,7 @@ export default class Beneficiary extends BaseModel {
   public id: number;
 
   @column()
-  public account_number: number;
+  public account_number: string;
 
   @column()
   public bank_name: string;
