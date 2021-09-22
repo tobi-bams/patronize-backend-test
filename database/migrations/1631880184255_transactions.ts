@@ -7,7 +7,7 @@ export default class Transactions extends BaseSchema {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id').primary();
       table.enum('txn_type', ['debit', 'credit']);
-      table.enum('purpose', ['deposit', 'transfer', 'reversal', 'widthdrawal']);
+      table.enum('purpose', ['deposit', 'transfer', 'reversal', 'withdrawal']);
       table.decimal('amount', 20, 4).unsigned();
       table.integer('account_id').unsigned().references('accounts.id');
       table.uuid('reference');

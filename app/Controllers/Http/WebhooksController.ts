@@ -92,7 +92,7 @@ export default class WebhooksController {
             await trx.rollback();
             console.log(error);
           }
-        }, 500);
+        }, 600);
       }
 
       if (event === 'transfer.failed') {

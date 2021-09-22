@@ -15,7 +15,7 @@ export default class TransactionsController {
   public async chargeBank({ request, response }: HttpContextContract) {
     const chargeBankSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number(),
+      amount: schema.number([rules.range(100, 500000)]),
     });
 
     const payload = await request.validate({ schema: chargeBankSchema });
@@ -67,6 +67,8 @@ export default class TransactionsController {
         }
       );
 
+      // I had to send the otp twice because sending the otp once using Paystack API does not finalize the
+      // transaction, only when i send the otp the second time is the transaction finalized.
       if (submitOtp1.data.status) {
         const submitOtp2 = await axios.post(
           'https://api.paystack.co/charge/submit_otp',
@@ -109,7 +111,7 @@ export default class TransactionsController {
   public async chargeCard({ request, response }: HttpContextContract) {
     const chargeCardSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number(),
+      amount: schema.number([rules.range(100, 500000)]),
     });
 
     const payload = await request.validate({ schema: chargeCardSchema });
@@ -304,7 +306,7 @@ export default class TransactionsController {
   public async withdrawal({ response, request }: HttpContextContract) {
     const withdrawalSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number(),
+      amount: schema.number([rules.range(100, 500000)]),
       account_number: schema.string({}, [rules.maxLength(10), rules.minLength(10)]),
     });
 
@@ -368,7 +370,7 @@ export default class TransactionsController {
       const external_txn = new ExternalTransaction();
       external_txn.fill({
         amount: amount,
-        txn_type: 'Transfer',
+        txn_type: 'Withdrawal',
         account_id: account.id,
         external_reference: bankTransfer.data.data.reference,
         third_party: user.name,
@@ -382,7 +384,7 @@ export default class TransactionsController {
       transaction.fill({
         amount: amount,
         txn_type: 'debit',
-        purpose: 'widthdrawal',
+        purpose: 'withdrawal',
         account_id: account.id,
         reference: v4(),
         balance_before: currentBalance,

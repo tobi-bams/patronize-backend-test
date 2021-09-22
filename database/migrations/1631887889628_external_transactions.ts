@@ -10,7 +10,7 @@ export default class ExternalTransactions extends BaseSchema {
       table.integer('account_id').unsigned().references('accounts.id');
       table.decimal('amount', 20,4);
       table.string('status');
-      table.enum('txn_type', ["Bank Funding", "Card Funding", "Transfer"]);
+      table.enum('txn_type', ["Bank Funding", "Card Funding", "Withdrawal"]);
       table.string('third_party');
       /**
        * Uses timestamptz for PostgreSQL and DATETIME2 for MSSQL
