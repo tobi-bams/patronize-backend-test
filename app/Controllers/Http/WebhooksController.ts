@@ -88,6 +88,7 @@ export default class WebhooksController {
             external_transactions.useTransaction(trx);
             await external_transactions.save();
             await trx.commit();
+            response.status(200);
           } catch (error) {
             await trx.rollback();
             console.log(error);
