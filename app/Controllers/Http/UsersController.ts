@@ -92,7 +92,7 @@ export default class UsersController {
       response.status(403);
       return {
         status: false,
-        message: 'Account already Exist',
+        message: 'Bank Account already Exist',
       };
     }
 

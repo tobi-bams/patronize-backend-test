@@ -15,7 +15,7 @@ export default class TransactionsController {
   public async chargeBank({ request, response }: HttpContextContract) {
     const chargeBankSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number([rules.range(100, 500000)]),
+      amount: schema.number([rules.range(100, 500000), rules.unsigned()]),
     });
 
     const payload = await request.validate({ schema: chargeBankSchema });
@@ -111,7 +111,7 @@ export default class TransactionsController {
   public async chargeCard({ request, response }: HttpContextContract) {
     const chargeCardSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number([rules.range(100, 500000)]),
+      amount: schema.number([rules.range(100, 500000), rules.unsigned()]),
     });
 
     const payload = await request.validate({ schema: chargeCardSchema });
@@ -123,7 +123,7 @@ export default class TransactionsController {
     const user = await User.query().where('email', email).preload('account').first();
 
     if (!user) {
-      response.status(403);
+      response.status(401);
       return {
         status: false,
         message: 'Invalid Credentials',
@@ -161,14 +161,19 @@ export default class TransactionsController {
         });
 
         await external_transactions.save();
-
+        response.status(200)
         return {
           status: true,
           message: 'Account Funded Successfully',
         };
       }
     } catch (error) {
+      response.status(500)
       console.log(error);
+      return {
+        status: false,
+        message: 'Sorry an Error occured, please try again'
+      }
     }
   }
 
@@ -197,7 +202,7 @@ export default class TransactionsController {
     const sendMoneySchema = schema.create({
       sender_email: schema.string({}, [rules.email()]),
       recipient_email: schema.string({}, [rules.email()]),
-      amount: schema.number(),
+      amount: schema.number([rules.unsigned()]),
     });
 
     const payload = await request.validate({ schema: sendMoneySchema });
@@ -306,7 +311,7 @@ export default class TransactionsController {
   public async withdrawal({ response, request }: HttpContextContract) {
     const withdrawalSchema = schema.create({
       email: schema.string({}, [rules.email()]),
-      amount: schema.number([rules.range(100, 500000)]),
+      amount: schema.number([rules.range(100, 500000), rules.unsigned()]),
       account_number: schema.string({}, [rules.maxLength(10), rules.minLength(10)]),
     });
 
